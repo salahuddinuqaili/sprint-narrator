@@ -1,0 +1,43 @@
+# Sprint Summary
+
+**{{ since }} to {{ until }}** | Sources: {{ sources | join(", ") }}
+
+---
+
+{{ narrative }}
+
+---
+
+## Details
+
+{% if features %}
+### Shipped
+{% for item in features %}
+- **{{ item.title }}** ({{ item.assignee }}) — [{{ item.source }}]({{ item.url }})
+{% endfor %}
+{% endif %}
+
+{% if bug_fixes %}
+### Bug Fixes
+{% for item in bug_fixes %}
+- **{{ item.title }}** ({{ item.assignee }}) — [{{ item.source }}]({{ item.url }})
+{% endfor %}
+{% endif %}
+
+{% if in_progress %}
+### In Progress
+{% for item in in_progress %}
+- **{{ item.title }}** ({{ item.assignee }}) — {{ item.status }}
+{% endfor %}
+{% endif %}
+
+{% if blocked %}
+### Blocked
+{% for item in blocked %}
+- **{{ item.title }}** ({{ item.assignee }}) — {{ item.status }}
+{% endfor %}
+{% endif %}
+
+---
+
+**Stats:** {{ stats.total }} items | {{ stats.completed }} completed ({{ stats.completion_rate }}) | {{ stats.contributors | length }} contributors

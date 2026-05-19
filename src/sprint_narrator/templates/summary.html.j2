@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprint Summary — {{ since }} to {{ until }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; color: #1a1a1a; line-height: 1.6; }
+    h1 { margin-bottom: 0.5rem; }
+    .meta { color: #666; margin-bottom: 2rem; }
+    .narrative { background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; white-space: pre-wrap; }
+    h2 { margin-top: 2rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; }
+    .item { padding: 0.5rem 0; border-bottom: 1px solid #f0f0f0; }
+    .item:last-child { border-bottom: none; }
+    .assignee { color: #666; font-size: 0.9rem; }
+    .source { font-size: 0.8rem; color: #0066cc; }
+    .stats { margin-top: 2rem; padding: 1rem; background: #e8f4fd; border-radius: 8px; font-size: 0.9rem; }
+    .blocked { border-left: 3px solid #dc3545; padding-left: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Sprint Summary</h1>
+  <p class="meta">{{ since }} to {{ until }} | Sources: {{ sources | join(", ") }}</p>
+
+  <div class="narrative">{{ narrative }}</div>
+
+  {% if features %}
+  <h2>Shipped</h2>
+  {% for item in features %}
+  <div class="item">
+    <strong>{{ item.title }}</strong>
+    <span class="assignee">— {{ item.assignee }}</span>
+    <a class="source" href="{{ item.url }}">{{ item.source }}</a>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if bug_fixes %}
+  <h2>Bug Fixes</h2>
+  {% for item in bug_fixes %}
+  <div class="item">
+    <strong>{{ item.title }}</strong>
+    <span class="assignee">— {{ item.assignee }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if blocked %}
+  <h2>Blocked</h2>
+  {% for item in blocked %}
+  <div class="item blocked">
+    <strong>{{ item.title }}</strong>
+    <span class="assignee">— {{ item.assignee }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="stats">
+    <strong>Stats:</strong> {{ stats.total }} items | {{ stats.completed }} completed ({{ stats.completion_rate }}) | {{ stats.contributors | length }} contributors
+  </div>
+</body>
+</html>
