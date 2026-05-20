@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
+from rich.table import Table
 
 from sprint_narrator import __version__
+from sprint_narrator.config import display_config, load_config, save_config
 
 app = typer.Typer(
     name="sprint-narrator",
@@ -22,7 +23,7 @@ def version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None, "--version", "-v", callback=version_callback, is_eager=True,
     ),
 ) -> None:
@@ -31,12 +32,14 @@ def main(
 
 @app.command()
 def run(
-    source: list[str] = typer.Option(..., "--source", "-s", help="Data source: github, linear, jira."),
-    since: Optional[str] = typer.Option(None, help="Start date (YYYY-MM-DD). Defaults to 7 days ago."),
-    until: Optional[str] = typer.Option(None, help="End date (YYYY-MM-DD). Defaults to today."),
-    team: Optional[str] = typer.Option(None, help="Team ID or name."),
+    source: list[str] = typer.Option(
+        ..., "--source", "-s", help="Data source: github, linear, jira."
+    ),
+    since: str | None = typer.Option(None, help="Start date (YYYY-MM-DD). Defaults to 7 days ago."),
+    until: str | None = typer.Option(None, help="End date (YYYY-MM-DD). Defaults to today."),
+    team: str | None = typer.Option(None, help="Team ID or name."),
     model: str = typer.Option("llama3.1:8b", help="Ollama model for narrative generation."),
-    output: Optional[Path] = typer.Option(None, "-o", help="Output file path."),
+    output: Path | None = typer.Option(None, "-o", help="Output file path."),
     format: str = typer.Option("md", help="Output format: md or html."),
 ) -> None:
     """Generate a sprint summary from configured sources."""
@@ -46,7 +49,7 @@ def run(
     console.print(f"[bold]Generating sprint summary ({start} to {end})...[/bold]")
     console.print(f"Sources: {', '.join(source)}")
 
-    # TODO: Fetch from sources → aggregate → narrate → render
+    # TODO: Fetch from sources → aggregate → narrate → render (Phase 3)
     raise NotImplementedError("run command not yet implemented")
 
 
@@ -68,12 +71,48 @@ def history(
 
 @app.command()
 def configure(
-    github_token: Optional[str] = typer.Option(None, help="GitHub personal access token."),
-    linear_token: Optional[str] = typer.Option(None, help="Linear API key."),
-    jira_url: Optional[str] = typer.Option(None, help="Jira instance URL."),
-    jira_token: Optional[str] = typer.Option(None, help="Jira API token."),
-    default_model: Optional[str] = typer.Option(None, help="Default Ollama model."),
+    github_token: str | None = typer.Option(None, help="GitHub personal access token."),
+    github_repo: list[str] | None = typer.Option(None, help="GitHub repos (owner/repo)."),
+    linear_token: str | None = typer.Option(None, help="Linear API key."),
+    linear_team_id: str | None = typer.Option(None, help="Linear team ID."),
+    jira_url: str | None = typer.Option(None, help="Jira instance URL."),
+    jira_email: str | None = typer.Option(None, help="Jira account email."),
+    jira_token: str | None = typer.Option(None, help="Jira API token."),
+    jira_project_key: str | None = typer.Option(None, help="Jira project key."),
+    default_model: str | None = typer.Option(None, help="Default Ollama model."),
+    show: bool = typer.Option(False, help="Show current config (tokens masked)."),
 ) -> None:
     """Set API tokens and defaults."""
-    # TODO: Read/write config from ~/.config/sprint-narrator/config.toml
-    raise NotImplementedError("configure command not yet implemented")
+    config = load_config()
+
+    if show:
+        table = Table(title="sprint-narrator config")
+        table.add_column("Setting", style="bold")
+        table.add_column("Value")
+        for key, val in display_config(config).items():
+            table.add_row(key, val)
+        console.print(table)
+        return
+
+    # Merge non-None arguments into existing config
+    if github_token is not None:
+        config.github_token = github_token
+    if github_repo is not None:
+        config.github_repos = github_repo
+    if linear_token is not None:
+        config.linear_token = linear_token
+    if linear_team_id is not None:
+        config.linear_team_id = linear_team_id
+    if jira_url is not None:
+        config.jira_url = jira_url
+    if jira_email is not None:
+        config.jira_email = jira_email
+    if jira_token is not None:
+        config.jira_token = jira_token
+    if jira_project_key is not None:
+        config.jira_project_key = jira_project_key
+    if default_model is not None:
+        config.default_model = default_model
+
+    save_config(config)
+    console.print("[green]Config saved.[/green]")

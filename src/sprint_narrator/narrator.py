@@ -1,4 +1,3 @@
-import ollama
 
 from sprint_narrator.aggregator import SprintData
 

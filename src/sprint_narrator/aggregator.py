@@ -42,7 +42,7 @@ def aggregate(items: list[WorkItem]) -> SprintData:
     other: list[WorkItem] = []
 
     for item in unique:
-        labels_lower = [l.lower() for l in item.labels]
+        labels_lower = [label.lower() for label in item.labels]
         status_lower = item.status.lower()
 
         if "blocked" in status_lower or "blocked" in labels_lower:
