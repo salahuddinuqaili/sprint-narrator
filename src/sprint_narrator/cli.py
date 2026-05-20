@@ -65,6 +65,20 @@ async def _fetch_linear(
         await source.close()
 
 
+async def _fetch_jira(
+    url: str, email: str, token: str, project_key: str,
+    since: datetime, until: datetime,
+) -> list:
+    """Fetch work items from Jira for a project."""
+    from sprint_narrator.sources.jira import JiraSource
+
+    source = JiraSource(url=url, email=email, token=token, project_key=project_key)
+    try:
+        return await source.fetch_issues(since, until)
+    finally:
+        await source.close()
+
+
 async def _run_pipeline(
     sources: list[str],
     since_str: str,
@@ -115,7 +129,29 @@ async def _run_pipeline(
             all_items.extend(items)
             console.print(f"  [green]Linear:[/green] fetched {len(items)} items")
         elif src == "jira":
-            console.print("  [yellow]Jira:[/yellow] not yet implemented, skipping")
+            missing = []
+            if not config.jira_url:
+                missing.append("--jira-url")
+            if not config.jira_email:
+                missing.append("--jira-email")
+            if not config.jira_project_key:
+                missing.append("--jira-project-key")
+            if missing:
+                console.print(
+                    f"[red]Jira config incomplete. Missing: {', '.join(missing)}[/red]\n"
+                    "  Set via: sprint-narrator configure <option> <value>"
+                )
+                raise typer.Exit(1)
+            items = await _fetch_jira(
+                url=config.jira_url,
+                email=config.jira_email,
+                token=token,
+                project_key=config.jira_project_key,
+                since=since_dt,
+                until=until_dt,
+            )
+            all_items.extend(items)
+            console.print(f"  [green]Jira:[/green] fetched {len(items)} items")
         else:
             console.print(f"  [red]Unknown source: {src}[/red]")
 
