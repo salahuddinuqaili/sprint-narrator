@@ -29,3 +29,6 @@ Local LLMs choke on long contexts. We classify models into small/medium/large ti
 
 ## 010 — Low temperature + explicit num_ctx for Ollama
 Temperature 0.3 keeps sprint summaries factual. num_ctx=4096 prevents OOM on 12GB VRAM GPUs that would otherwise auto-allocate larger contexts.
+
+## 011 — asyncio.run() bridge in CLI
+Typer commands are sync but our pipeline (HTTP fetches + ollama) is async. Using asyncio.run() in the run command bridges the gap without adding async framework dependencies.

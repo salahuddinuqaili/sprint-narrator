@@ -1,12 +1,15 @@
+import asyncio
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import typer
 from rich.console import Console
+from rich.markdown import Markdown
 from rich.table import Table
 
 from sprint_narrator import __version__
-from sprint_narrator.config import display_config, load_config, save_config
+from sprint_narrator.config import display_config, get_token_for_source, load_config, save_config
+from sprint_narrator.exceptions import NarratorError
 
 app = typer.Typer(
     name="sprint-narrator",
@@ -30,17 +33,130 @@ def main(
     pass
 
 
+async def _fetch_github(
+    token: str, repos: list[str], since: datetime, until: datetime
+) -> list:
+    """Fetch work items from all configured GitHub repos."""
+    from sprint_narrator.sources.github import GitHubSource
+
+    items: list = []
+    for repo in repos:
+        source = GitHubSource(token=token, repo=repo)
+        try:
+            prs = await source.fetch_pull_requests(since, until)
+            commits = await source.fetch_commits(since, until)
+            items.extend(prs)
+            items.extend(commits)
+        finally:
+            await source.close()
+    return items
+
+
+async def _run_pipeline(
+    sources: list[str],
+    since_str: str,
+    until_str: str,
+    model: str,
+    fmt: str,
+    output: Path | None,
+    save: bool,
+) -> None:
+    """Async pipeline: fetch → aggregate → narrate → render."""
+    from sprint_narrator.aggregator import WorkItem, aggregate
+    from sprint_narrator.narrator import generate_fallback_narrative, generate_narrative
+    from sprint_narrator.render import render_output
+
+    config = load_config()
+
+    since_dt = datetime.fromisoformat(since_str)
+    until_dt = datetime.fromisoformat(until_str)
+
+    all_items: list[WorkItem] = []
+
+    for src in sources:
+        token = get_token_for_source(src, config)
+
+        if src == "github":
+            if not config.github_repos:
+                console.print(
+                    "[red]No GitHub repos configured.[/red]\n"
+                    "  Set via: sprint-narrator configure --github-repo owner/repo"
+                )
+                raise typer.Exit(1)
+            items = await _fetch_github(token, config.github_repos, since_dt, until_dt)
+            all_items.extend(items)
+            console.print(
+                f"  [green]GitHub:[/green] fetched {len(items)} items"
+                f" from {len(config.github_repos)} repo(s)"
+            )
+        elif src in ("linear", "jira"):
+            console.print(f"  [yellow]{src.title()}:[/yellow] not yet implemented, skipping")
+        else:
+            console.print(f"  [red]Unknown source: {src}[/red]")
+
+    if not all_items:
+        console.print("[yellow]No work items found for this period.[/yellow]")
+        raise typer.Exit(0)
+
+    sprint_data = aggregate(all_items)
+    console.print(
+        f"  Aggregated: {sprint_data.stats['total']} items,"
+        f" {sprint_data.stats['completed']} completed"
+    )
+
+    # Generate narrative — fallback if Ollama is unavailable
+    try:
+        console.print(f"  Generating narrative with [bold]{model}[/bold]...")
+        narrative = await generate_narrative(
+            sprint_data, model=model, since=since_str, until=until_str
+        )
+    except NarratorError as e:
+        console.print(f"  [yellow]LLM unavailable: {e}[/yellow]")
+        console.print("  [yellow]Using fallback narrative.[/yellow]")
+        narrative = generate_fallback_narrative(sprint_data)
+
+    rendered = render_output(
+        narrative=narrative,
+        sprint_data=sprint_data,
+        fmt=fmt,
+        since=since_str,
+        until=until_str,
+        sources=sources,
+    )
+
+    if output:
+        output.write_text(rendered, encoding="utf-8")
+        console.print(f"  [green]Written to {output}[/green]")
+    else:
+        console.print()
+        if fmt == "md":
+            console.print(Markdown(rendered))
+        else:
+            console.print(rendered)
+
+    if save:
+        from sprint_narrator.storage import save_summary
+
+        date_range = f"{since_str} to {until_str}"
+        save_summary(date_range=date_range, sources=sources, narrative=narrative)
+        console.print("  [green]Summary saved to archive.[/green]")
+
+
 @app.command()
 def run(
     source: list[str] = typer.Option(
         ..., "--source", "-s", help="Data source: github, linear, jira."
     ),
-    since: str | None = typer.Option(None, help="Start date (YYYY-MM-DD). Defaults to 7 days ago."),
-    until: str | None = typer.Option(None, help="End date (YYYY-MM-DD). Defaults to today."),
-    team: str | None = typer.Option(None, help="Team ID or name."),
+    since: str | None = typer.Option(
+        None, help="Start date (YYYY-MM-DD). Defaults to 7 days ago."
+    ),
+    until: str | None = typer.Option(
+        None, help="End date (YYYY-MM-DD). Defaults to today."
+    ),
     model: str = typer.Option("llama3.1:8b", help="Ollama model for narrative generation."),
     output: Path | None = typer.Option(None, "-o", help="Output file path."),
     format: str = typer.Option("md", help="Output format: md or html."),
+    save: bool = typer.Option(False, help="Save summary to local archive."),
 ) -> None:
     """Generate a sprint summary from configured sources."""
     start = since or (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
@@ -49,8 +165,15 @@ def run(
     console.print(f"[bold]Generating sprint summary ({start} to {end})...[/bold]")
     console.print(f"Sources: {', '.join(source)}")
 
-    # TODO: Fetch from sources → aggregate → narrate → render (Phase 3)
-    raise NotImplementedError("run command not yet implemented")
+    asyncio.run(_run_pipeline(
+        sources=source,
+        since_str=start,
+        until_str=end,
+        model=model,
+        fmt=format,
+        output=output,
+        save=save,
+    ))
 
 
 @app.command()
@@ -65,8 +188,17 @@ def history(
         console.print("[yellow]No past summaries found.[/yellow]")
         return
 
+    table = Table(title="Sprint Summary Archive")
+    table.add_column("Date Range", style="bold")
+    table.add_column("Sources")
+    table.add_column("Words", justify="right")
+    table.add_column("Saved At")
+
     for s in summaries:
-        console.print(f"[bold]{s['date_range']}[/bold] — {s['sources']}")
+        word_count = str(len(s["narrative"].split()))
+        table.add_row(s["date_range"], s["sources"], word_count, s["created_at"])
+
+    console.print(table)
 
 
 @app.command()
