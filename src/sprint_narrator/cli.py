@@ -52,6 +52,19 @@ async def _fetch_github(
     return items
 
 
+async def _fetch_linear(
+    token: str, team_id: str, since: datetime, until: datetime
+) -> list:
+    """Fetch work items from Linear for a team."""
+    from sprint_narrator.sources.linear import LinearSource
+
+    source = LinearSource(token=token, team_id=team_id)
+    try:
+        return await source.fetch_issues(since, until)
+    finally:
+        await source.close()
+
+
 async def _run_pipeline(
     sources: list[str],
     since_str: str,
@@ -89,8 +102,20 @@ async def _run_pipeline(
                 f"  [green]GitHub:[/green] fetched {len(items)} items"
                 f" from {len(config.github_repos)} repo(s)"
             )
-        elif src in ("linear", "jira"):
-            console.print(f"  [yellow]{src.title()}:[/yellow] not yet implemented, skipping")
+        elif src == "linear":
+            if not config.linear_team_id:
+                console.print(
+                    "[red]No Linear team ID configured.[/red]\n"
+                    "  Set via: sprint-narrator configure --linear-team-id <id>"
+                )
+                raise typer.Exit(1)
+            items = await _fetch_linear(
+                token, config.linear_team_id, since_dt, until_dt
+            )
+            all_items.extend(items)
+            console.print(f"  [green]Linear:[/green] fetched {len(items)} items")
+        elif src == "jira":
+            console.print("  [yellow]Jira:[/yellow] not yet implemented, skipping")
         else:
             console.print(f"  [red]Unknown source: {src}[/red]")
 
