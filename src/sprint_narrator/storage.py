@@ -48,7 +48,8 @@ def get_history(limit: int = 10) -> list[dict]:
     init_db()
     conn = _get_connection()
     rows = conn.execute(
-        "SELECT date_range, sources, narrative, created_at FROM summaries ORDER BY created_at DESC LIMIT ?",
+        "SELECT date_range, sources, narrative, created_at"
+        " FROM summaries ORDER BY created_at DESC LIMIT ?",
         (limit,),
     ).fetchall()
     conn.close()

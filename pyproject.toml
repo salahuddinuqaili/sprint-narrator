@@ -1,10 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "sprint-narrator"
 version = "0.1.0"
 description = "AI-powered sprint summary generator that pulls from Linear, Jira, and GitHub to create narrative reports"
 requires-python = ">=3.13"
 dependencies = [
-    "typer[all]>=0.15",
+    "typer>=0.15",
     "httpx>=0.28",
     "ollama>=0.4",
     "jinja2>=3.1",
@@ -14,8 +18,8 @@ dependencies = [
 [project.scripts]
 sprint-narrator = "sprint_narrator.cli:app"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.25",
     "ruff>=0.11",
@@ -28,6 +32,9 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/sprint_narrator/cli.py" = ["B008"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

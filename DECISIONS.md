@@ -14,3 +14,12 @@ Linear's GraphQL API exposes richer filtering (by team, date range, cycle) than 
 
 ## 005 — Modular sources pattern
 Each API integration (GitHub, Linear, Jira) is isolated in its own file. This allows independent development, testing, and the ability to add new sources (e.g., Shortcut, Notion) without touching existing code.
+
+## 006 — Manual TOML writing over tomli-w
+Config is flat key-value pairs. Writing TOML manually avoids adding a tomli-w dependency for something trivially serialisable.
+
+## 007 — Hatchling build backend
+Added `[build-system]` with hatchling so `uv sync` installs the package in editable mode. Required for `sprint_narrator` imports to resolve in tests and the CLI entry point.
+
+## 008 — B008 suppression for cli.py
+Typer requires `typer.Option()` calls in function signatures. Suppressed ruff B008 per-file rather than globally.
