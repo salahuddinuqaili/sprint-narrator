@@ -23,3 +23,9 @@ Added `[build-system]` with hatchling so `uv sync` installs the package in edita
 
 ## 008 — B008 suppression for cli.py
 Typer requires `typer.Option()` calls in function signatures. Suppressed ruff B008 per-file rather than globally.
+
+## 009 — Model-tier prompt adaptation
+Local LLMs choke on long contexts. We classify models into small/medium/large tiers and truncate sprint data accordingly (titles-only for <4B, short descriptions for 7-9B, full descriptions for 13B+).
+
+## 010 — Low temperature + explicit num_ctx for Ollama
+Temperature 0.3 keeps sprint summaries factual. num_ctx=4096 prevents OOM on 12GB VRAM GPUs that would otherwise auto-allocate larger contexts.
