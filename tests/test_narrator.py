@@ -37,10 +37,10 @@ def _make_sprint_data(
     blocked: int = 1,
 ) -> SprintData:
     return SprintData(
-        features=[_make_item(title=f"Feature {i+1}") for i in range(features)],
-        bug_fixes=[_make_item(title=f"Bug fix {i+1}") for i in range(bugs)],
-        in_progress=[_make_item(title=f"In progress {i+1}") for i in range(in_progress)],
-        blocked=[_make_item(title=f"Blocked {i+1}") for i in range(blocked)],
+        features=[_make_item(title=f"Feature {i + 1}") for i in range(features)],
+        bug_fixes=[_make_item(title=f"Bug fix {i + 1}") for i in range(bugs)],
+        in_progress=[_make_item(title=f"In progress {i + 1}") for i in range(in_progress)],
+        blocked=[_make_item(title=f"Blocked {i + 1}") for i in range(blocked)],
         other=[],
         stats={"total": features + bugs + in_progress + blocked},
     )

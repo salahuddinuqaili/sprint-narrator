@@ -26,9 +26,7 @@ class GitHubSource:
             timeout=30.0,
         )
 
-    async def fetch_pull_requests(
-        self, since: datetime, until: datetime
-    ) -> list[WorkItem]:
+    async def fetch_pull_requests(self, since: datetime, until: datetime) -> list[WorkItem]:
         """Fetch merged PRs in the date range."""
         params: dict[str, str | int] = {
             "state": "closed",
@@ -56,22 +54,22 @@ class GitHubSource:
             labels = [lbl["name"] for lbl in pr.get("labels", [])]
             user = pr.get("user", {})
 
-            items.append(WorkItem(
-                title=pr["title"],
-                description=body[:200],
-                status="done",
-                assignee=user.get("login", "unknown"),
-                source="github",
-                url=pr["html_url"],
-                completed_at=merged_dt,
-                labels=labels,
-            ))
+            items.append(
+                WorkItem(
+                    title=pr["title"],
+                    description=body[:200],
+                    status="done",
+                    assignee=user.get("login", "unknown"),
+                    source="github",
+                    url=pr["html_url"],
+                    completed_at=merged_dt,
+                    labels=labels,
+                )
+            )
 
         return items
 
-    async def fetch_commits(
-        self, since: datetime, until: datetime
-    ) -> list[WorkItem]:
+    async def fetch_commits(self, since: datetime, until: datetime) -> list[WorkItem]:
         """Fetch commits in the date range."""
         params: dict[str, str | int] = {
             "since": since.isoformat(),
@@ -92,21 +90,21 @@ class GitHubSource:
             if date_str:
                 committed_at = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
 
-            items.append(WorkItem(
-                title=message.split("\n", 1)[0],
-                description=message[:200],
-                status="done",
-                assignee=author_info.get("name", "unknown"),
-                source="github",
-                url=commit.get("html_url", ""),
-                completed_at=committed_at,
-            ))
+            items.append(
+                WorkItem(
+                    title=message.split("\n", 1)[0],
+                    description=message[:200],
+                    status="done",
+                    assignee=author_info.get("name", "unknown"),
+                    source="github",
+                    url=commit.get("html_url", ""),
+                    completed_at=committed_at,
+                )
+            )
 
         return items
 
-    async def _paginate(
-        self, url: str, params: dict[str, str | int]
-    ) -> list[dict]:
+    async def _paginate(self, url: str, params: dict[str, str | int]) -> list[dict]:
         """Fetch pages following Link headers, up to MAX_PAGES."""
         all_items: list[dict] = []
         next_url: str | None = url
@@ -128,9 +126,7 @@ class GitHubSource:
     def _check_response(self, response: httpx.Response) -> None:
         """Raise typed errors for common GitHub API failures."""
         if response.status_code == 401:
-            raise SourceAuthError(
-                "GitHub authentication failed. Check your token is valid."
-            )
+            raise SourceAuthError("GitHub authentication failed. Check your token is valid.")
         if response.status_code == 403:
             reset = response.headers.get("x-ratelimit-reset", "")
             msg = "GitHub API rate limit exceeded."

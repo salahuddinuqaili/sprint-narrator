@@ -88,13 +88,9 @@ class LinearSource:
         )
 
         if response.status_code == 401:
-            raise SourceAuthError(
-                "Linear authentication failed. Check your API key is valid."
-            )
+            raise SourceAuthError("Linear authentication failed. Check your API key is valid.")
         if response.status_code >= 400:
-            raise SourceFetchError(
-                f"Linear API returned HTTP {response.status_code}."
-            )
+            raise SourceFetchError(f"Linear API returned HTTP {response.status_code}.")
 
         body = response.json()
 
@@ -104,9 +100,7 @@ class LinearSource:
 
         return body.get("data", {})
 
-    async def fetch_issues(
-        self, since: datetime, until: datetime
-    ) -> list[WorkItem]:
+    async def fetch_issues(self, since: datetime, until: datetime) -> list[WorkItem]:
         """Fetch issues updated in the date range for the configured team."""
         variables: dict = {
             "teamId": self._team_id,
@@ -140,16 +134,18 @@ class LinearSource:
                         node["completedAt"].replace("Z", "+00:00")
                     )
 
-                items.append(WorkItem(
-                    title=node["title"],
-                    description=description[:200],
-                    status=status,
-                    assignee=assignee,
-                    source="linear",
-                    url=node.get("url", ""),
-                    completed_at=completed_at,
-                    labels=labels,
-                ))
+                items.append(
+                    WorkItem(
+                        title=node["title"],
+                        description=description[:200],
+                        status=status,
+                        assignee=assignee,
+                        source="linear",
+                        url=node.get("url", ""),
+                        completed_at=completed_at,
+                        labels=labels,
+                    )
+                )
 
             page_info = issues_data.get("pageInfo", {})
             if not page_info.get("hasNextPage", False):
@@ -158,9 +154,7 @@ class LinearSource:
 
         return items
 
-    async def fetch_cycles(
-        self, since: datetime, until: datetime
-    ) -> list[dict]:
+    async def fetch_cycles(self, since: datetime, until: datetime) -> list[dict]:
         """Fetch current and recent cycles for the team."""
         data = await self._execute(CYCLES_QUERY, {"teamId": self._team_id})
         team_data = data.get("team") or {}
@@ -177,14 +171,16 @@ class LinearSource:
             if starts_at and starts_at > until.isoformat():
                 continue
 
-            cycles.append({
-                "name": node.get("name") or f"Cycle {node.get('number', '?')}",
-                "starts_at": starts_at,
-                "ends_at": ends_at,
-                "progress": node.get("progress", 0),
-                "completed_scope": node.get("completedScopeCount", 0),
-                "total_scope": node.get("scopeCount", 0),
-            })
+            cycles.append(
+                {
+                    "name": node.get("name") or f"Cycle {node.get('number', '?')}",
+                    "starts_at": starts_at,
+                    "ends_at": ends_at,
+                    "progress": node.get("progress", 0),
+                    "completed_scope": node.get("completedScopeCount", 0),
+                    "total_scope": node.get("scopeCount", 0),
+                }
+            )
 
         return cycles
 

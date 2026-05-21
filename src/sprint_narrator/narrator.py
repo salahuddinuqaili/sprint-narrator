@@ -71,9 +71,7 @@ def check_ollama_health(model: str) -> None:
     available_base = {m.model.removesuffix(":latest") for m in response.models}
 
     if model not in available and model not in available_base:
-        raise NarratorError(
-            f"Model '{model}' not found. Pull it with: ollama pull {model}"
-        )
+        raise NarratorError(f"Model '{model}' not found. Pull it with: ollama pull {model}")
 
 
 def _get_model_tier(model: str) -> str:
@@ -109,9 +107,7 @@ def _truncate(text: str, length: int) -> str:
     return text[: length - 3] + "..."
 
 
-def _format_items(
-    items: list[WorkItem], max_items: int, desc_length: int
-) -> list[str]:
+def _format_items(items: list[WorkItem], max_items: int, desc_length: int) -> list[str]:
     """Format work items as lines for the prompt context."""
     lines: list[str] = []
     for item in items[:max_items]:
@@ -123,9 +119,7 @@ def _format_items(
     return lines
 
 
-def _format_sprint_context(
-    sprint_data: SprintData, model_tier: str, since: str, until: str
-) -> str:
+def _format_sprint_context(sprint_data: SprintData, model_tier: str, since: str, until: str) -> str:
     """Build structured text context optimised for local LLMs."""
     max_items, desc_length = _TIER_LIMITS[model_tier]
 
@@ -159,9 +153,7 @@ def _format_sprint_context(
     total = sum(len(items) for _, items in categories)
     completed = len(sprint_data.features) + len(sprint_data.bug_fixes)
     rate = round(completed / total * 100) if total > 0 else 0
-    sections.append(
-        f"STATS: {completed}/{total} items completed ({rate}% completion rate)"
-    )
+    sections.append(f"STATS: {completed}/{total} items completed ({rate}% completion rate)")
 
     return "\n".join(sections)
 
@@ -209,8 +201,7 @@ def generate_fallback_narrative(sprint_data: SprintData) -> str:
 
     parts: list[str] = []
     parts.append(
-        f"The team completed {completed} of {total} items this sprint"
-        f" ({rate}% completion rate)."
+        f"The team completed {completed} of {total} items this sprint ({rate}% completion rate)."
     )
 
     details: list[str] = []
@@ -221,8 +212,7 @@ def generate_fallback_narrative(sprint_data: SprintData) -> str:
         details.append(f"{bugs} bug{'s' if bugs != 1 else ''} {verb} fixed")
     if blocked:
         details.append(
-            f"{blocked} item{'s' if blocked != 1 else ''}"
-            f" {'are' if blocked != 1 else 'is'} blocked"
+            f"{blocked} item{'s' if blocked != 1 else ''} {'are' if blocked != 1 else 'is'} blocked"
         )
     if details:
         parts.append(" ".join([details[0].capitalize()] + [d for d in details[1:]]) + ".")

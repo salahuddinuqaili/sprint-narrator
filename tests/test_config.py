@@ -42,9 +42,7 @@ def test_load_config_from_file(config_dir: Path) -> None:
     assert config.default_model == "mistral"
 
 
-def test_env_var_overrides_file(
-    config_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_env_var_overrides_file(config_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     toml = 'github_token = "from_file"\n'
     (config_dir / "config.toml").write_text(toml, encoding="utf-8")
     monkeypatch.setenv("SPRINT_NARRATOR_GITHUB_TOKEN", "from_env")
@@ -53,9 +51,7 @@ def test_env_var_overrides_file(
     assert config.github_token == "from_env"
 
 
-def test_env_var_github_repos(
-    config_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_env_var_github_repos(config_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SPRINT_NARRATOR_GITHUB_REPOS", "a/b, c/d")
     config = load_config()
     assert config.github_repos == ["a/b", "c/d"]

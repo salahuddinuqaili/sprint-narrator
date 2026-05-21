@@ -33,15 +33,17 @@ def version_callback(value: bool) -> None:
 @app.callback()
 def main(
     version: bool | None = typer.Option(
-        None, "--version", "-v", callback=version_callback, is_eager=True,
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        is_eager=True,
     ),
 ) -> None:
     pass
 
 
-async def _fetch_github(
-    token: str, repos: list[str], since: datetime, until: datetime
-) -> list:
+async def _fetch_github(token: str, repos: list[str], since: datetime, until: datetime) -> list:
     """Fetch work items from all configured GitHub repos."""
     from sprint_narrator.sources.github import GitHubSource
 
@@ -58,9 +60,7 @@ async def _fetch_github(
     return items
 
 
-async def _fetch_linear(
-    token: str, team_id: str, since: datetime, until: datetime
-) -> list:
+async def _fetch_linear(token: str, team_id: str, since: datetime, until: datetime) -> list:
     """Fetch work items from Linear for a team."""
     from sprint_narrator.sources.linear import LinearSource
 
@@ -72,8 +72,12 @@ async def _fetch_linear(
 
 
 async def _fetch_jira(
-    url: str, email: str, token: str, project_key: str,
-    since: datetime, until: datetime,
+    url: str,
+    email: str,
+    token: str,
+    project_key: str,
+    since: datetime,
+    until: datetime,
 ) -> list:
     """Fetch work items from Jira for a project."""
     from sprint_narrator.sources.jira import JiraSource
@@ -131,9 +135,7 @@ async def _run_pipeline(
                     "  Set via: sprint-narrator configure --github-repo owner/repo"
                 )
                 raise typer.Exit(1)
-            fetch_coros[src] = _fetch_github(
-                token, config.github_repos, since_dt, until_dt
-            )
+            fetch_coros[src] = _fetch_github(token, config.github_repos, since_dt, until_dt)
         elif src == "linear":
             if not config.linear_team_id:
                 console.print(
@@ -141,9 +143,7 @@ async def _run_pipeline(
                     "  Set via: sprint-narrator configure --linear-team-id <id>"
                 )
                 raise typer.Exit(1)
-            fetch_coros[src] = _fetch_linear(
-                token, config.linear_team_id, since_dt, until_dt
-            )
+            fetch_coros[src] = _fetch_linear(token, config.linear_team_id, since_dt, until_dt)
         elif src == "jira":
             missing = []
             if not config.jira_url:
@@ -176,9 +176,7 @@ async def _run_pipeline(
     # Fetch from all sources concurrently
     source_names = list(fetch_coros.keys())
     with console.status("[bold]Fetching from sources..."):
-        results = await asyncio.gather(
-            *fetch_coros.values(), return_exceptions=True
-        )
+        results = await asyncio.gather(*fetch_coros.values(), return_exceptions=True)
 
     # Process results — collect items from successes, report failures
     all_items: list[WorkItem] = []
@@ -189,13 +187,9 @@ async def _run_pipeline(
                 f"Run: sprint-narrator configure --{src}-token <token>"
             )
         elif isinstance(result, SourceFetchError):
-            console.print(
-                f"  [yellow]{src.title()}:[/yellow] fetch error: {result}"
-            )
+            console.print(f"  [yellow]{src.title()}:[/yellow] fetch error: {result}")
         elif isinstance(result, Exception):
-            console.print(
-                f"  [red]{src.title()}:[/red] unexpected error: {result}"
-            )
+            console.print(f"  [red]{src.title()}:[/red] unexpected error: {result}")
         else:
             all_items.extend(result)
             count = len(result)
@@ -218,9 +212,7 @@ async def _run_pipeline(
 
     # Generate narrative — fallback if Ollama is unavailable
     try:
-        with console.status(
-            f"[bold]Generating narrative with {model}..."
-        ):
+        with console.status(f"[bold]Generating narrative with {model}..."):
             narrative = await generate_narrative(
                 sprint_data, model=model, since=since_str, until=until_str
             )
@@ -261,20 +253,12 @@ def run(
     source: list[str] = typer.Option(
         ..., "--source", "-s", help="Data source: github, linear, jira."
     ),
-    since: str | None = typer.Option(
-        None, help="Start date (YYYY-MM-DD). Defaults to 7 days ago."
-    ),
-    until: str | None = typer.Option(
-        None, help="End date (YYYY-MM-DD). Defaults to today."
-    ),
-    model: str = typer.Option(
-        "llama3.1:8b", help="Ollama model for narrative generation."
-    ),
+    since: str | None = typer.Option(None, help="Start date (YYYY-MM-DD). Defaults to 7 days ago."),
+    until: str | None = typer.Option(None, help="End date (YYYY-MM-DD). Defaults to today."),
+    model: str = typer.Option("llama3.1:8b", help="Ollama model for narrative generation."),
     output: Path | None = typer.Option(None, "-o", help="Output file path."),
     format: str = typer.Option("md", help="Output format: md or html."),
-    save: bool = typer.Option(
-        False, help="Save summary to local archive."
-    ),
+    save: bool = typer.Option(False, help="Save summary to local archive."),
     dry_run: bool = typer.Option(
         False, "--dry-run", help="Fetch and aggregate only, skip narrative."
     ),
@@ -283,28 +267,30 @@ def run(
     start = since or (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
     end = until or datetime.now().strftime("%Y-%m-%d")
 
-    console.print(
-        f"[bold]Generating sprint summary ({start} to {end})...[/bold]"
-    )
+    console.print(f"[bold]Generating sprint summary ({start} to {end})...[/bold]")
     console.print(f"Sources: {', '.join(source)}")
 
     try:
-        asyncio.run(_run_pipeline(
-            sources=source,
-            since_str=start,
-            until_str=end,
-            model=model,
-            fmt=format,
-            output=output,
-            save=save,
-            dry_run=dry_run,
-        ))
+        asyncio.run(
+            _run_pipeline(
+                sources=source,
+                since_str=start,
+                until_str=end,
+                model=model,
+                fmt=format,
+                output=output,
+                save=save,
+                dry_run=dry_run,
+            )
+        )
     except SprintNarratorError as e:
-        console.print(Panel(
-            f"{e}",
-            title=type(e).__name__,
-            border_style="red",
-        ))
+        console.print(
+            Panel(
+                f"{e}",
+                title=type(e).__name__,
+                border_style="red",
+            )
+        )
         raise typer.Exit(1) from None
 
 
@@ -334,29 +320,162 @@ def history(
 
 
 @app.command()
+def demo() -> None:
+    """Run a demo with sample data — no API keys or Ollama needed."""
+    from sprint_narrator.aggregator import SprintData, WorkItem
+    from sprint_narrator.narrator import generate_fallback_narrative
+    from sprint_narrator.render import render_output
+
+    sample_items = SprintData(
+        features=[
+            WorkItem(
+                title="Add SSO login via SAML",
+                description="Enterprise SSO integration",
+                status="done",
+                assignee="Alice",
+                source="github",
+                url="https://github.com/acme/app/pull/142",
+                completed_at=datetime(2026, 5, 18),
+                labels=["feature"],
+            ),
+            WorkItem(
+                title="Dashboard analytics widgets",
+                description="Real-time charts for key metrics",
+                status="done",
+                assignee="Bob",
+                source="linear",
+                url="https://linear.app/acme/issue/ENG-301",
+                completed_at=datetime(2026, 5, 16),
+                labels=["feature"],
+            ),
+            WorkItem(
+                title="Export reports to PDF",
+                description="One-click PDF export from report view",
+                status="done",
+                assignee="Carol",
+                source="jira",
+                url="https://acme.atlassian.net/browse/PROJ-89",
+                completed_at=datetime(2026, 5, 19),
+                labels=["feature"],
+            ),
+            WorkItem(
+                title="Webhook retry with exponential backoff",
+                description="Automatic retry for failed webhook deliveries",
+                status="done",
+                assignee="Alice",
+                source="github",
+                url="https://github.com/acme/app/pull/147",
+                completed_at=datetime(2026, 5, 17),
+                labels=["feature"],
+            ),
+            WorkItem(
+                title="Onboarding email sequence",
+                description="3-step drip campaign for new users",
+                status="done",
+                assignee="Dave",
+                source="linear",
+                url="https://linear.app/acme/issue/ENG-312",
+                completed_at=datetime(2026, 5, 20),
+                labels=["feature"],
+            ),
+        ],
+        bug_fixes=[
+            WorkItem(
+                title="Fix timezone offset in date picker",
+                description="Dates were off by one in UTC-negative zones",
+                status="done",
+                assignee="Bob",
+                source="github",
+                url="https://github.com/acme/app/pull/144",
+                completed_at=datetime(2026, 5, 15),
+                labels=["bug"],
+            ),
+            WorkItem(
+                title="Fix CSV export missing headers",
+                description="Column headers were dropped on large exports",
+                status="done",
+                assignee="Carol",
+                source="jira",
+                url="https://acme.atlassian.net/browse/PROJ-91",
+                completed_at=datetime(2026, 5, 18),
+                labels=["bug"],
+            ),
+        ],
+        in_progress=[
+            WorkItem(
+                title="Migrate to PostgreSQL 16",
+                description="Schema migration and perf testing",
+                status="in_progress",
+                assignee="Alice",
+                source="linear",
+                url="https://linear.app/acme/issue/ENG-320",
+                labels=[],
+            ),
+            WorkItem(
+                title="Mobile responsive tables",
+                description="Make data tables scroll on small screens",
+                status="in_progress",
+                assignee="Dave",
+                source="jira",
+                url="https://acme.atlassian.net/browse/PROJ-95",
+                labels=[],
+            ),
+            WorkItem(
+                title="API rate limiting middleware",
+                description="Token bucket rate limiter for public API",
+                status="in_progress",
+                assignee="Bob",
+                source="github",
+                url="https://github.com/acme/app/pull/151",
+                labels=[],
+            ),
+        ],
+        blocked=[
+            WorkItem(
+                title="HIPAA audit logging",
+                description="Blocked on compliance team sign-off",
+                status="blocked",
+                assignee="Carol",
+                source="linear",
+                url="https://linear.app/acme/issue/ENG-298",
+                labels=[],
+            ),
+        ],
+        other=[],
+        stats={
+            "total": 12,
+            "completed": 7,
+            "completion_rate": "58%",
+            "contributors": ["Alice", "Bob", "Carol", "Dave"],
+        },
+    )
+
+    narrative = generate_fallback_narrative(sample_items)
+    rendered = render_output(
+        narrative=narrative,
+        sprint_data=sample_items,
+        fmt="md",
+        since="2026-05-13",
+        until="2026-05-20",
+        sources=["github", "linear", "jira"],
+    )
+
+    console.print("[bold]sprint-narrator demo[/bold] — sample output with no API keys\n")
+    console.print(Markdown(rendered))
+
+
+@app.command()
 def configure(
-    github_token: str | None = typer.Option(
-        None, help="GitHub personal access token."
-    ),
-    github_repo: list[str] | None = typer.Option(
-        None, help="GitHub repos (owner/repo)."
-    ),
+    github_token: str | None = typer.Option(None, help="GitHub personal access token."),
+    github_repo: list[str] | None = typer.Option(None, help="GitHub repos (owner/repo)."),
     linear_token: str | None = typer.Option(None, help="Linear API key."),
     linear_team_id: str | None = typer.Option(None, help="Linear team ID."),
     jira_url: str | None = typer.Option(None, help="Jira instance URL."),
-    jira_email: str | None = typer.Option(
-        None, help="Jira account email."
-    ),
+    jira_email: str | None = typer.Option(None, help="Jira account email."),
     jira_token: str | None = typer.Option(None, help="Jira API token."),
-    jira_project_key: str | None = typer.Option(
-        None, help="Jira project key."
-    ),
-    default_model: str | None = typer.Option(
-        None, help="Default Ollama model."
-    ),
-    show: bool = typer.Option(
-        False, help="Show current config (tokens masked)."
-    ),
+    jira_project_key: str | None = typer.Option(None, help="Jira project key."),
+    default_model: str | None = typer.Option(None, help="Default Ollama model."),
+    show: bool = typer.Option(False, help="Show current config (tokens masked)."),
 ) -> None:
     """Set API tokens and defaults."""
     config = load_config()

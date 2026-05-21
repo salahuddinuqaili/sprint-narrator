@@ -1,5 +1,7 @@
 # sprint-narrator
 
+![CI](https://github.com/salahuddinuqaili/sprint-narrator/actions/workflows/ci.yml/badge.svg)
+
 AI-powered sprint summary generator that pulls from GitHub, Linear, and Jira to create narrative reports using local LLMs via Ollama.
 
 > Turn ticket data into leadership-ready sprint summaries — fully local, no API keys to OpenAI required.
@@ -17,6 +19,13 @@ Sprint reviews shouldn't start with someone scrolling through Jira for 10 minute
 - **Dual output formats** — Markdown and styled HTML
 - **Local archive** — SQLite history of past summaries
 - **12GB VRAM optimised** — explicit context window and temperature tuning for consumer GPUs
+
+## Try It
+
+```bash
+uv sync                    # install dependencies
+sprint-narrator demo       # see sample output — no API keys needed
+```
 
 ## Quick Start
 
@@ -115,7 +124,7 @@ CLI (Typer + Rich)
 
 ```bash
 uv sync                          # install dependencies
-uv run pytest -v                 # run tests (74 passing)
+uv run pytest -v                 # run tests (78 passing)
 uv run ruff check src tests      # lint
 uv run ruff format src tests     # format
 ```

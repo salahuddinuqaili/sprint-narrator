@@ -51,8 +51,13 @@ def load_config() -> AppConfig:
 
     # Apply file values first
     for fld in (
-        "github_token", "linear_token", "linear_team_id",
-        "jira_url", "jira_email", "jira_token", "jira_project_key",
+        "github_token",
+        "linear_token",
+        "linear_team_id",
+        "jira_url",
+        "jira_email",
+        "jira_token",
+        "jira_project_key",
         "default_model",
     ):
         if fld in file_data:
@@ -82,8 +87,13 @@ def save_config(config: AppConfig) -> None:
 
     lines: list[str] = []
     for fld in (
-        "github_token", "linear_token", "linear_team_id",
-        "jira_url", "jira_email", "jira_token", "jira_project_key",
+        "github_token",
+        "linear_token",
+        "linear_team_id",
+        "jira_url",
+        "jira_email",
+        "jira_token",
+        "jira_project_key",
         "default_model",
     ):
         val = getattr(config, fld)
@@ -132,9 +142,7 @@ def get_token_for_source(source: str, config: AppConfig) -> str:
     field_name, hint = token_fields[source]
     token = getattr(config, field_name)
     if not token:
-        raise typer.BadParameter(
-            f"{source.title()} token not configured.\n  Set via: {hint}"
-        )
+        raise typer.BadParameter(f"{source.title()} token not configured.\n  Set via: {hint}")
     return token
 
 
