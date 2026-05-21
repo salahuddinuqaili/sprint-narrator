@@ -107,9 +107,7 @@ async def test_fetch_pull_requests_filters_by_date(since: datetime, until: datet
 
 
 @pytest.mark.asyncio
-async def test_fetch_pull_requests_truncates_description(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_pull_requests_truncates_description(since: datetime, until: datetime) -> None:
     source = GitHubSource(token="fake", repo="owner/repo")
     pr = _make_pr()
     pr["body"] = "x" * 500

@@ -31,9 +31,7 @@ class JiraSource:
     MAX_PAGES = 5
     PAGE_SIZE = 100
 
-    def __init__(
-        self, url: str, email: str, token: str, project_key: str
-    ) -> None:
+    def __init__(self, url: str, email: str, token: str, project_key: str) -> None:
         self._base_url = url.rstrip("/")
         self._project_key = project_key
         self._client = httpx.AsyncClient(
@@ -46,17 +44,11 @@ class JiraSource:
     def _check_response(self, response: httpx.Response) -> None:
         """Raise typed errors for common Jira API failures."""
         if response.status_code in (401, 403):
-            raise SourceAuthError(
-                "Jira authentication failed. Check your email and API token."
-            )
+            raise SourceAuthError("Jira authentication failed. Check your email and API token.")
         if response.status_code >= 400:
-            raise SourceFetchError(
-                f"Jira API returned HTTP {response.status_code}."
-            )
+            raise SourceFetchError(f"Jira API returned HTTP {response.status_code}.")
 
-    async def fetch_issues(
-        self, since: datetime, until: datetime
-    ) -> list[WorkItem]:
+    async def fetch_issues(self, since: datetime, until: datetime) -> list[WorkItem]:
         """Fetch issues via JQL query with offset-based pagination."""
         since_str = since.strftime("%Y-%m-%d")
         until_str = until.strftime("%Y-%m-%d")
@@ -112,23 +104,23 @@ class JiraSource:
                 completed_at = None
                 resolution_date = fields.get("resolutiondate")
                 if resolution_date:
-                    completed_at = datetime.fromisoformat(
-                        resolution_date.replace("Z", "+00:00")
-                    )
+                    completed_at = datetime.fromisoformat(resolution_date.replace("Z", "+00:00"))
 
                 issue_key = issue.get("key", "")
                 browse_url = f"{self._base_url}/browse/{issue_key}"
 
-                items.append(WorkItem(
-                    title=fields.get("summary", ""),
-                    description=description,
-                    status=status,
-                    assignee=assignee,
-                    source="jira",
-                    url=browse_url,
-                    completed_at=completed_at,
-                    labels=labels,
-                ))
+                items.append(
+                    WorkItem(
+                        title=fields.get("summary", ""),
+                        description=description,
+                        status=status,
+                        assignee=assignee,
+                        source="jira",
+                        url=browse_url,
+                        completed_at=completed_at,
+                        labels=labels,
+                    )
+                )
 
             total = body.get("total", 0)
             start_at += len(issues)
@@ -137,9 +129,7 @@ class JiraSource:
 
         return items
 
-    async def fetch_sprint(
-        self, since: datetime, until: datetime
-    ) -> list[dict]:
+    async def fetch_sprint(self, since: datetime, until: datetime) -> list[dict]:
         """Fetch active/recent sprints via Jira Agile endpoints.
 
         Returns empty list if agile endpoints are unavailable.
@@ -178,13 +168,15 @@ class JiraSource:
                 if start_date and start_date > until.isoformat():
                     continue
 
-                sprints.append({
-                    "name": s.get("name", ""),
-                    "state": s.get("state", ""),
-                    "start_date": start_date,
-                    "end_date": end_date,
-                    "goal": s.get("goal", ""),
-                })
+                sprints.append(
+                    {
+                        "name": s.get("name", ""),
+                        "state": s.get("state", ""),
+                        "start_date": start_date,
+                        "end_date": end_date,
+                        "goal": s.get("goal", ""),
+                    }
+                )
 
             return sprints
 

@@ -74,14 +74,20 @@ def test_run_command_end_to_end(
     """Full pipeline: fetch -> aggregate -> narrate -> render."""
     mock_config.return_value = _make_config()
     mock_fetch.return_value = _mock_github_items()
-    mock_narrate.return_value = (
-        "## Executive Summary\nThe team shipped 2 features this sprint."
-    )
+    mock_narrate.return_value = "## Executive Summary\nThe team shipped 2 features this sprint."
 
-    result = runner.invoke(app, [
-        "run", "-s", "github",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+        ],
+    )
 
     assert result.exit_code == 0, result.stdout
     assert "team shipped 2 features" in result.stdout
@@ -105,14 +111,20 @@ def test_run_command_fallback(
     mock_config.return_value = _make_config()
     mock_fetch.return_value = _mock_github_items()
     mock_narrate.side_effect = NarratorError("Ollama is not running")
-    mock_fallback.return_value = (
-        "The team completed 3 of 3 items this sprint (100% completion)."
-    )
+    mock_fallback.return_value = "The team completed 3 of 3 items this sprint (100% completion)."
 
-    result = runner.invoke(app, [
-        "run", "-s", "github",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+        ],
+    )
 
     assert result.exit_code == 0, result.stdout
     assert "LLM unavailable" in result.stdout
@@ -125,10 +137,18 @@ def test_run_command_no_source(mock_config: MagicMock) -> None:
     """Error when source token is not configured."""
     mock_config.return_value = AppConfig()  # No tokens set
 
-    result = runner.invoke(app, [
-        "run", "-s", "github",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+        ],
+    )
 
     assert result.exit_code != 0
 
@@ -177,11 +197,19 @@ def test_run_dry_run(
     mock_config.return_value = _make_config()
     mock_fetch.return_value = _mock_github_items()
 
-    result = runner.invoke(app, [
-        "run", "-s", "github",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-        "--dry-run",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+            "--dry-run",
+        ],
+    )
 
     assert result.exit_code == 0, result.stdout
     assert "dry run" in result.stdout.lower()
@@ -202,10 +230,18 @@ def test_run_auth_error_display(
     mock_config.return_value = _make_config()
     mock_fetch.side_effect = SourceAuthError("GitHub authentication failed.")
 
-    result = runner.invoke(app, [
-        "run", "-s", "github",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+        ],
+    )
 
     assert "authentication failed" in result.stdout.lower()
     assert "configure" in result.stdout.lower()
@@ -222,17 +258,25 @@ def test_run_multiple_sources(
     mock_config: MagicMock,
 ) -> None:
     """Multiple sources are fetched concurrently."""
-    mock_config.return_value = _make_config(
-        linear_token="lin_test", linear_team_id="team-1"
-    )
+    mock_config.return_value = _make_config(linear_token="lin_test", linear_team_id="team-1")
     mock_github.return_value = _mock_github_items()
     mock_linear.return_value = _mock_linear_items()
     mock_narrate.return_value = "## Executive Summary\nGreat sprint!"
 
-    result = runner.invoke(app, [
-        "run", "-s", "github", "-s", "linear",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "-s",
+            "linear",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+        ],
+    )
 
     assert result.exit_code == 0, result.stdout
     # Both sources should be fetched
@@ -253,17 +297,25 @@ def test_run_source_partial_failure(
     mock_config: MagicMock,
 ) -> None:
     """One source fails, other succeeds — partial results are used."""
-    mock_config.return_value = _make_config(
-        linear_token="lin_test", linear_team_id="team-1"
-    )
+    mock_config.return_value = _make_config(linear_token="lin_test", linear_team_id="team-1")
     mock_github.return_value = _mock_github_items()
     mock_linear.side_effect = SourceFetchError("Linear API timeout")
     mock_narrate.return_value = "## Executive Summary\nGood sprint despite issues."
 
-    result = runner.invoke(app, [
-        "run", "-s", "github", "-s", "linear",
-        "--since", "2026-05-01", "--until", "2026-05-14",
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "-s",
+            "linear",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+        ],
+    )
 
     assert result.exit_code == 0, result.stdout
     # GitHub succeeded
@@ -273,3 +325,19 @@ def test_run_source_partial_failure(
     assert "Linear" in result.stdout
     # Narrative was still generated from GitHub data
     mock_narrate.assert_called_once()
+
+
+# --- Demo command ---
+
+
+def test_demo_command() -> None:
+    """Demo runs without error and contains expected sections."""
+    result = runner.invoke(app, ["demo"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "demo" in result.stdout.lower()
+    # Should contain sample data
+    assert "SSO" in result.stdout or "login" in result.stdout.lower()
+    # Should contain sprint summary structure
+    assert "Sprint Summary" in result.stdout
+    assert "Shipped" in result.stdout

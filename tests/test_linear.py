@@ -70,9 +70,7 @@ def until() -> datetime:
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_maps_to_work_items(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_maps_to_work_items(since: datetime, until: datetime) -> None:
     """GraphQL response nodes map to correct WorkItem fields."""
     source = LinearSource(token="lin_test", team_id="team-1")
     issue = _make_issue(labels=["feature", "frontend"])
@@ -96,9 +94,7 @@ async def test_fetch_issues_maps_to_work_items(
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_state_mapping(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_state_mapping(since: datetime, until: datetime) -> None:
     """Linear states map to internal status values."""
     source = LinearSource(token="lin_test", team_id="team-1")
     issues = [
@@ -126,9 +122,7 @@ async def test_fetch_issues_state_mapping(
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_paginates(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_paginates(since: datetime, until: datetime) -> None:
     """Cursor-based pagination fetches multiple pages."""
     source = LinearSource(token="lin_test", team_id="team-1")
 
@@ -142,10 +136,12 @@ async def test_fetch_issues_paginates(
         has_next_page=False,
     )
 
-    source._client.post = AsyncMock(side_effect=[
-        _mock_response(json_data=page1),
-        _mock_response(json_data=page2),
-    ])
+    source._client.post = AsyncMock(
+        side_effect=[
+            _mock_response(json_data=page1),
+            _mock_response(json_data=page2),
+        ]
+    )
 
     items = await source.fetch_issues(since, until)
 
@@ -162,14 +158,10 @@ async def test_fetch_issues_paginates(
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_auth_error(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_auth_error(since: datetime, until: datetime) -> None:
     """401 response raises SourceAuthError."""
     source = LinearSource(token="bad_token", team_id="team-1")
-    source._client.post = AsyncMock(
-        return_value=_mock_response(status_code=401)
-    )
+    source._client.post = AsyncMock(return_value=_mock_response(status_code=401))
 
     with pytest.raises(SourceAuthError, match="authentication failed"):
         await source.fetch_issues(since, until)
@@ -177,17 +169,11 @@ async def test_fetch_issues_auth_error(
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_graphql_error(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_graphql_error(since: datetime, until: datetime) -> None:
     """GraphQL errors field raises SourceFetchError."""
     source = LinearSource(token="lin_test", team_id="team-1")
-    error_response = {
-        "errors": [{"message": "Variable 'teamId' is invalid"}]
-    }
-    source._client.post = AsyncMock(
-        return_value=_mock_response(json_data=error_response)
-    )
+    error_response = {"errors": [{"message": "Variable 'teamId' is invalid"}]}
+    source._client.post = AsyncMock(return_value=_mock_response(json_data=error_response))
 
     with pytest.raises(SourceFetchError, match="Variable 'teamId' is invalid"):
         await source.fetch_issues(since, until)
@@ -195,9 +181,7 @@ async def test_fetch_issues_graphql_error(
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_truncates_description(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_truncates_description(since: datetime, until: datetime) -> None:
     """Long descriptions are truncated to 200 characters."""
     source = LinearSource(token="lin_test", team_id="team-1")
     issue = _make_issue(description="x" * 500)
@@ -212,9 +196,7 @@ async def test_fetch_issues_truncates_description(
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_no_assignee(
-    since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_no_assignee(since: datetime, until: datetime) -> None:
     """Issues without an assignee default to 'unassigned'."""
     source = LinearSource(token="lin_test", team_id="team-1")
     issue = _make_issue(assignee="")
@@ -260,9 +242,7 @@ async def test_fetch_cycles(since: datetime, until: datetime) -> None:
             }
         }
     }
-    source._client.post = AsyncMock(
-        return_value=_mock_response(json_data=cycle_response)
-    )
+    source._client.post = AsyncMock(return_value=_mock_response(json_data=cycle_response))
 
     cycles = await source.fetch_cycles(since, until)
 

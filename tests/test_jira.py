@@ -106,24 +106,20 @@ async def test_fetch_issues_jql_date_format(
     source: JiraSource, since: datetime, until: datetime
 ) -> None:
     """JQL query contains correctly formatted date strings."""
-    source._client.get = AsyncMock(
-        return_value=_mock_response(json_data=_make_search_response([]))
-    )
+    source._client.get = AsyncMock(return_value=_mock_response(json_data=_make_search_response([])))
 
     await source.fetch_issues(since, until)
 
     call_kwargs = source._client.get.call_args
     jql = call_kwargs.kwargs["params"]["jql"]
-    assert '2026-05-10' in jql
-    assert '2026-05-20' in jql
+    assert "2026-05-10" in jql
+    assert "2026-05-20" in jql
     assert 'project = "PROJ"' in jql
     await source.close()
 
 
 @pytest.mark.asyncio
-async def test_fetch_issues_paginates(
-    source: JiraSource, since: datetime, until: datetime
-) -> None:
+async def test_fetch_issues_paginates(source: JiraSource, since: datetime, until: datetime) -> None:
     """Offset-based pagination fetches multiple pages."""
     page1 = _make_search_response(
         [_make_issue(key="PROJ-1", summary="Issue 1")],
@@ -136,10 +132,12 @@ async def test_fetch_issues_paginates(
         start_at=1,
     )
 
-    source._client.get = AsyncMock(side_effect=[
-        _mock_response(json_data=page1),
-        _mock_response(json_data=page2),
-    ])
+    source._client.get = AsyncMock(
+        side_effect=[
+            _mock_response(json_data=page1),
+            _mock_response(json_data=page2),
+        ]
+    )
 
     items = await source.fetch_issues(since, until)
 
@@ -155,9 +153,7 @@ async def test_fetch_issues_auth_error(
     source: JiraSource, since: datetime, until: datetime
 ) -> None:
     """401 response raises SourceAuthError."""
-    source._client.get = AsyncMock(
-        return_value=_mock_response(status_code=401)
-    )
+    source._client.get = AsyncMock(return_value=_mock_response(status_code=401))
 
     with pytest.raises(SourceAuthError, match="authentication failed"):
         await source.fetch_issues(since, until)
@@ -169,9 +165,7 @@ async def test_fetch_issues_http_error(
     source: JiraSource, since: datetime, until: datetime
 ) -> None:
     """500 response raises SourceFetchError."""
-    source._client.get = AsyncMock(
-        return_value=_mock_response(status_code=500)
-    )
+    source._client.get = AsyncMock(return_value=_mock_response(status_code=500))
 
     with pytest.raises(SourceFetchError, match="HTTP 500"):
         await source.fetch_issues(since, until)
@@ -269,31 +263,33 @@ async def test_fetch_issues_status_mapping(
 
 
 @pytest.mark.asyncio
-async def test_fetch_sprint_success(
-    source: JiraSource, since: datetime, until: datetime
-) -> None:
+async def test_fetch_sprint_success(source: JiraSource, since: datetime, until: datetime) -> None:
     """Agile endpoints return sprint metadata."""
-    board_response = _mock_response(json_data={
-        "values": [{"id": 42, "name": "PROJ board"}],
-    })
-    sprint_response = _mock_response(json_data={
-        "values": [
-            {
-                "name": "Sprint 5",
-                "state": "active",
-                "startDate": "2026-05-10T00:00:00.000Z",
-                "endDate": "2026-05-24T00:00:00.000Z",
-                "goal": "Ship login feature",
-            },
-            {
-                "name": "Sprint 4",
-                "state": "closed",
-                "startDate": "2026-04-01T00:00:00.000Z",
-                "endDate": "2026-04-15T00:00:00.000Z",
-                "goal": "Setup project",
-            },
-        ],
-    })
+    board_response = _mock_response(
+        json_data={
+            "values": [{"id": 42, "name": "PROJ board"}],
+        }
+    )
+    sprint_response = _mock_response(
+        json_data={
+            "values": [
+                {
+                    "name": "Sprint 5",
+                    "state": "active",
+                    "startDate": "2026-05-10T00:00:00.000Z",
+                    "endDate": "2026-05-24T00:00:00.000Z",
+                    "goal": "Ship login feature",
+                },
+                {
+                    "name": "Sprint 4",
+                    "state": "closed",
+                    "startDate": "2026-04-01T00:00:00.000Z",
+                    "endDate": "2026-04-15T00:00:00.000Z",
+                    "goal": "Setup project",
+                },
+            ],
+        }
+    )
 
     source._client.get = AsyncMock(side_effect=[board_response, sprint_response])
 
@@ -312,9 +308,7 @@ async def test_fetch_sprint_agile_unavailable(
     source: JiraSource, since: datetime, until: datetime
 ) -> None:
     """Agile endpoint failure returns empty list gracefully."""
-    source._client.get = AsyncMock(
-        return_value=_mock_response(status_code=404)
-    )
+    source._client.get = AsyncMock(return_value=_mock_response(status_code=404))
 
     sprints = await source.fetch_sprint(since, until)
 
