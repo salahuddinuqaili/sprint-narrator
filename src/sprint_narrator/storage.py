@@ -54,3 +54,39 @@ def get_history(limit: int = 10) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def get_trends_data(limit: int = 5) -> list[dict]:
+    """Retrieve parsed raw_data from recent summaries for trend analysis.
+
+    Skips entries with missing or malformed raw_data.
+    Returns oldest-first for chronological trend display.
+    """
+    init_db()
+    conn = _get_connection()
+    rows = conn.execute(
+        "SELECT date_range, raw_data, created_at FROM summaries ORDER BY id DESC LIMIT ?",
+        (limit,),
+    ).fetchall()
+    conn.close()
+
+    results: list[dict] = []
+    for row in rows:
+        raw = row["raw_data"]
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except (json.JSONDecodeError, TypeError):
+            continue
+        results.append(
+            {
+                "date_range": row["date_range"],
+                "created_at": row["created_at"],
+                **data,
+            }
+        )
+
+    # Return oldest-first for chronological display
+    results.reverse()
+    return results

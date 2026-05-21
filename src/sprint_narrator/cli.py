@@ -244,7 +244,20 @@ async def _run_pipeline(
         from sprint_narrator.storage import save_summary
 
         date_range = f"{since_str} to {until_str}"
-        save_summary(date_range=date_range, sources=sources, narrative=narrative)
+        raw_data = {
+            "features": len(sprint_data.features),
+            "bug_fixes": len(sprint_data.bug_fixes),
+            "in_progress": len(sprint_data.in_progress),
+            "blocked": len(sprint_data.blocked),
+            "other": len(sprint_data.other),
+            **sprint_data.stats,
+        }
+        save_summary(
+            date_range=date_range,
+            sources=sources,
+            narrative=narrative,
+            raw_data=raw_data,
+        )
         console.print("  [green]Summary saved to archive.[/green]")
 
 
@@ -317,6 +330,81 @@ def history(
         table.add_row(s["date_range"], s["sources"], word_count, s["created_at"])
 
     console.print(table)
+
+
+@app.command()
+def trends(
+    limit: int = typer.Option(5, help="Number of past sprints to analyse."),
+) -> None:
+    """Show velocity trends from saved sprint summaries."""
+    from sprint_narrator.storage import get_trends_data
+
+    data = get_trends_data(limit)
+    if len(data) < 2:
+        console.print(
+            "[yellow]Need at least 2 saved sprints for trends."
+            " Run with --save to start tracking.[/yellow]"
+        )
+        return
+
+    # Sprint-by-sprint table
+    table = Table(title="Sprint Velocity")
+    table.add_column("Date Range", style="bold")
+    table.add_column("Total", justify="right")
+    table.add_column("Completed", justify="right")
+    table.add_column("Rate", justify="right")
+    table.add_column("Contributors", justify="right")
+
+    rates: list[float] = []
+    all_contributors: dict[str, int] = {}
+
+    for entry in data:
+        total = entry.get("total", 0)
+        completed = entry.get("completed", 0)
+        rate_str = entry.get("completion_rate", "0%")
+        rate_val = float(rate_str.replace("%", "")) if rate_str else 0.0
+        rates.append(rate_val)
+
+        contributors = entry.get("contributors", [])
+        for c in contributors:
+            all_contributors[c] = all_contributors.get(c, 0) + 1
+
+        table.add_row(
+            entry["date_range"],
+            str(total),
+            str(completed),
+            rate_str,
+            str(len(contributors)),
+        )
+
+    console.print(table)
+    console.print()
+
+    # Summary analytics
+    avg_rate = sum(rates) / len(rates)
+    console.print(f"  Average completion rate: [bold]{avg_rate:.0f}%[/bold]")
+
+    # Velocity trend: compare recent half to older half
+    mid = len(rates) // 2
+    older_avg = sum(rates[:mid]) / mid
+    recent_avg = sum(rates[mid:]) / (len(rates) - mid)
+    diff = recent_avg - older_avg
+
+    if diff > 5:
+        trend = "[green]improving[/green]"
+    elif diff < -5:
+        trend = "[red]declining[/red]"
+    else:
+        trend = "[yellow]stable[/yellow]"
+    console.print(f"  Velocity trend: {trend}")
+
+    # Most consistent contributor
+    if all_contributors:
+        top = max(all_contributors, key=lambda k: all_contributors[k])
+        console.print(
+            f"  Most consistent contributor: [bold]{top}[/bold]"
+            f" ({all_contributors[top]}/{len(data)} sprints)"
+        )
 
 
 @app.command()
