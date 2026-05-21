@@ -17,6 +17,7 @@ Sprint reviews shouldn't start with someone scrolling through Jira for 10 minute
 - **Smart categorisation** — automatically sorts work into Shipped, Bug Fixes, In Progress, and Blocked
 - **Fallback mode** — template-based summaries when Ollama is unavailable
 - **Dual output formats** — Markdown and styled HTML
+- **Velocity tracking** — sprint trends, completion rate history, and contributor analytics
 - **Local archive** — SQLite history of past summaries
 - **12GB VRAM optimised** — explicit context window and temperature tuning for consumer GPUs
 
@@ -48,8 +49,14 @@ sprint-narrator run -s github --format html -o summary.html
 # Save to local archive
 sprint-narrator run -s github --save
 
+# Preview without LLM (verify source config)
+sprint-narrator run -s github --dry-run
+
 # View past summaries
 sprint-narrator history
+
+# Sprint velocity trends
+sprint-narrator trends
 ```
 
 ## Configuration
@@ -124,7 +131,7 @@ CLI (Typer + Rich)
 
 ```bash
 uv sync                          # install dependencies
-uv run pytest -v                 # run tests (78 passing)
+uv run pytest -v                 # run tests (86 passing)
 uv run ruff check src tests      # lint
 uv run ruff format src tests     # format
 ```
