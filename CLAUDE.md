@@ -33,4 +33,18 @@ uv run ruff format src tests    # format
 
 - All tests in `tests/`, mock all external API calls
 - `test_aggregator.py` — categorization logic unit tests
-- `test_cli.py` — CLI integration tests
+- `test_cli.py` — CLI integration tests (end-to-end, dry-run, fallback, concurrent sources)
+- `test_config.py` — config load/save, env var overrides, token masking
+- `test_github.py` — GitHub REST source (async, uses `AsyncMock`)
+- `test_linear.py` — Linear GraphQL source (cursor pagination, state mapping)
+- `test_jira.py` — Jira REST source (JQL, ADF extraction, agile endpoints)
+- `test_narrator.py` — Ollama health checks, model tiers, narrative generation
+- `test_render.py` — Jinja2 template rendering (md + html)
+
+## Key Patterns
+
+- CLI uses `asyncio.run()` to bridge sync Typer commands to async pipeline
+- Multiple sources fetch concurrently via `asyncio.gather(return_exceptions=True)`
+- Narrator catches `NarratorError` internally and falls back to template narrative
+- Mock sources at `sprint_narrator.cli._fetch_github` etc; mock narrator at `sprint_narrator.narrator.generate_narrative`
+- ruff B008 suppressed in `cli.py` only (Typer requires `typer.Option()` in signatures)
