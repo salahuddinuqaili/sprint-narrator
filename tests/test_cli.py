@@ -341,3 +341,109 @@ def test_demo_command() -> None:
     # Should contain sprint summary structure
     assert "Sprint Summary" in result.stdout
     assert "Shipped" in result.stdout
+
+
+# --- Trends command ---
+
+
+def _make_trends_data(rates: list[int]) -> list[dict]:
+    """Build mock trends data with given completion rates."""
+    return [
+        {
+            "date_range": f"sprint {i + 1}",
+            "created_at": f"2026-05-{(i + 1) * 14:02d}",
+            "total": 10,
+            "completed": rate * 10 // 100,
+            "completion_rate": f"{rate}%",
+            "contributors": ["Alice", "Bob"] if i % 2 == 0 else ["Alice"],
+        }
+        for i, rate in enumerate(rates)
+    ]
+
+
+@patch("sprint_narrator.storage.get_trends_data")
+def test_trends_command(mock_trends: MagicMock) -> None:
+    """Trends shows velocity table with completion rates."""
+    mock_trends.return_value = _make_trends_data([60, 70, 80])
+
+    result = runner.invoke(app, ["trends"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "Sprint Velocity" in result.stdout
+    assert "60%" in result.stdout
+    assert "70%" in result.stdout
+    assert "80%" in result.stdout
+    assert "Average completion rate" in result.stdout
+
+
+@patch("sprint_narrator.storage.get_trends_data")
+def test_trends_insufficient_data(mock_trends: MagicMock) -> None:
+    """Fewer than 2 sprints shows tracking message."""
+    mock_trends.return_value = _make_trends_data([75])
+
+    result = runner.invoke(app, ["trends"])
+
+    assert result.exit_code == 0
+    assert "Need at least 2" in result.stdout
+    assert "--save" in result.stdout
+
+
+@patch("sprint_narrator.storage.get_trends_data")
+def test_trends_velocity_improving(mock_trends: MagicMock) -> None:
+    """Recent sprints with higher rates show improving trend."""
+    mock_trends.return_value = _make_trends_data([50, 55, 70, 80])
+
+    result = runner.invoke(app, ["trends"])
+
+    assert result.exit_code == 0
+    assert "improving" in result.stdout.lower()
+
+
+@patch("sprint_narrator.storage.get_trends_data")
+def test_trends_velocity_declining(mock_trends: MagicMock) -> None:
+    """Recent sprints with lower rates show declining trend."""
+    mock_trends.return_value = _make_trends_data([80, 75, 55, 50])
+
+    result = runner.invoke(app, ["trends"])
+
+    assert result.exit_code == 0
+    assert "declining" in result.stdout.lower()
+
+
+@patch("sprint_narrator.cli.load_config")
+@patch("sprint_narrator.cli._fetch_github", new_callable=AsyncMock)
+@patch("sprint_narrator.narrator.generate_narrative", new_callable=AsyncMock)
+@patch("sprint_narrator.storage.save_summary")
+def test_save_stores_raw_data(
+    mock_save: MagicMock,
+    mock_narrate: AsyncMock,
+    mock_fetch: AsyncMock,
+    mock_config: MagicMock,
+) -> None:
+    """--save passes SprintData stats as raw_data to save_summary."""
+    mock_config.return_value = _make_config()
+    mock_fetch.return_value = _mock_github_items()
+    mock_narrate.return_value = "## Executive Summary\nDone."
+
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "-s",
+            "github",
+            "--since",
+            "2026-05-01",
+            "--until",
+            "2026-05-14",
+            "--save",
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    mock_save.assert_called_once()
+    call_kwargs = mock_save.call_args
+    raw_data = call_kwargs.kwargs.get("raw_data") or call_kwargs[1].get("raw_data")
+    assert raw_data is not None
+    assert "total" in raw_data
+    assert "completed" in raw_data
+    assert "features" in raw_data
